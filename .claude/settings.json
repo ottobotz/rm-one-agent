@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/stevenbotz/otto-appwork/AppWork-Project-Page/**)",
+      "Read(//Users/stevenbotz/otto-appwork/**)",
+      "Bash(ssh root@95.217.23.158 'ls /etc/systemd/system/ | grep -i otto')",
+      "Bash(ssh root@95.217.23.158 'ps aux | grep -i \"openclaw\\\\|otto\" | grep -v grep')",
+      "Bash(ssh root@95.217.23.158 'ls /usr/local/bin/ | grep -i otto && find /usr -name \"openclaw*\" 2>/dev/null')",
+      "Bash(ssh root@95.217.23.158 'ls /proc/993/exe -la 2>/dev/null || cat /proc/993/cmdline 2>/dev/null | tr \"\\\\0\" \" \"')",
+      "Bash(ssh root@95.217.23.158 'ls /proc/3886/fd/ 2>/dev/null | head && cat /proc/3886/cmdline 2>/dev/null | tr \"\\\\0\" \" \" && ls -la /proc/3886/exe 2>/dev/null')",
+      "Bash(ssh root@95.217.23.158 'cat /usr/lib/node_modules/openclaw/docs/gateway/sandboxing.md | head -100')",
+      "Bash(node -e ':*)",
+      "Read(//Users/stevenbotz/otto-gtm/src/app/**)",
+      "Read(//Users/stevenbotz/otto-gtm/**)",
+      "Bash(npx tsc:*)",
+      "Read(//Users/stevenbotz/content-studio/**)",
+      "Bash(npm run:*)",
+      "Bash(curl -s -X POST http://localhost:3001/api/knowledge -H 'Content-Type: application/json' -d '{\"source_id\":\"91acba93-16cd-4974-b319-8bb4b7288884\"}' --max-time 60)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d[:2] if isinstance\\(d,list\\) else d, indent=2\\)\\)\")",
+      "Read(//Users/stevenbotz/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/stevenbotz/otto-gtm/src/app/workspace/[id]",
+      "/Users/stevenbotz/otto-gtm/src/app/api/quickstart"
+    ]
+  }
+}

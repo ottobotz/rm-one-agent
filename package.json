@@ -1,0 +1,17 @@
+{
+  "name": "rm-one-agent",
+  "version": "1.0.0",
+  "description": "Website visitor agent for RM ONE",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js"
+  },
+  "dependencies": {
+    "@slack/web-api": "^7.0.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "pm2": "^6.0.14"
+  }
+}
