@@ -245,25 +245,80 @@ const CTA_USER = 'U0ANH541WQ5';
 function buildVisitorBlocks(visitor, apollo) {
   const { name, title, company, email, location, pageVisited, visitTime } = visitor;
 
-  // Resolve LinkedIn — use Apollo-enriched URL for known contacts, raw RB2B for net-new
+  const accountLink = apollo.accountId
+    ? `<https://app.apollo.io/#/accounts/${apollo.accountId}|View Company>`
+    : null;
+
+  // ── Company-only card (no contact found)
+  if (!apollo.found && apollo.accountId) {
+    const companyLinkedin = apollo.accountLinkedin
+      ? `<${apollo.accountLinkedin}|View Company LinkedIn>`
+      : '_Not available_';
+    const companyWebsite = apollo.accountWebsite
+      ? `<${apollo.accountWebsite}|${apollo.accountWebsite}>`
+      : '_Not available_';
+    const companyLists = apollo.accountLabels?.length > 0
+      ? apollo.accountLabels.map(l => `• ${l}`).join('\n')
+      : '_None_';
+    const dealsText = apollo.deals?.length > 0
+      ? apollo.deals.map(d => `• ${d.name} — ${d.stage_name || 'unknown stage'}${d.amount ? ` ($${Number(d.amount).toLocaleString()})` : ''}`).join('\n')
+      : '_No associated deals_';
+
+    return {
+      blocks: [
+        { type: 'header', text: { type: 'plain_text', text: '🌐 New Website Visitor' } },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*${company || 'Unknown Company'}*${location ? ` · ${location}` : ''}\n_No contact identified_`
+          }
+        },
+        {
+          type: 'section',
+          fields: [
+            { type: 'mrkdwn', text: `*Website:*\n${companyWebsite}` },
+            { type: 'mrkdwn', text: `*LinkedIn:*\n${companyLinkedin}` },
+            { type: 'mrkdwn', text: `*Page Visited:*\n${pageVisited || 'N/A'}` },
+            { type: 'mrkdwn', text: `*Visit Time:*\n${visitTime || 'N/A'}` }
+          ]
+        },
+        { type: 'divider' },
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: `*Apollo Status:* \`Company Only\`\n${accountLink || '_No Apollo account found_'}` }
+        },
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: `*Company Lists*\n${companyLists}` }
+        },
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: `*Associated Deals*\n${dealsText}` }
+        },
+        { type: 'divider' },
+        {
+          type: 'context',
+          elements: [{ type: 'mrkdwn', text: '🏢 Company tagged in Website Visitors (RB2B) list' }]
+        }
+      ],
+      fallbackText: `New website visitor from ${company || 'Unknown Company'} — no contact identified`
+    };
+  }
+
+  // ── Contact card (known or net-new contact)
   const resolvedLinkedIn = apollo.linkedin || normalizeLinkedInUrl(visitor.linkedin);
   const linkedInDisplay = resolvedLinkedIn
     ? `<${resolvedLinkedIn}|View Profile>${apollo.linkedInSource === 'apollo' ? ' _↩ from Apollo_' : apollo.linkedInSource === 'rb2b_updated' ? ' _↑ updated Apollo_' : ''}`
     : '_Bad URL — not found in Apollo_';
 
-  // Apollo status
   const statusLine = apollo.found ? '`Known Contact`' : '`Net New` — not found in Apollo';
 
-  // Apollo deep links
   const contactLink = apollo.contactId
     ? `<https://app.apollo.io/#/contacts/${apollo.contactId}|View Contact>`
     : null;
-  const accountLink = apollo.accountId
-    ? `<https://app.apollo.io/#/accounts/${apollo.accountId}|View Company>`
-    : null;
   const linksLine = [contactLink, accountLink].filter(Boolean).join('  ·  ') || '_No links available_';
 
-  // Lists
   const peopleLists = apollo.contactLabels?.length > 0
     ? apollo.contactLabels.map(l => `• ${l}`).join('\n')
     : '_None_';
@@ -274,14 +329,12 @@ function buildVisitorBlocks(visitor, apollo) {
     ? `*People Lists:*\n${peopleLists}\n\n*Company Lists:*\n${companyLists}`
     : '_Not in Apollo_';
 
-  // Sequences (active only)
   const seqText = apollo.found
     ? (apollo.sequences?.length > 0
         ? apollo.sequences.map(s => `• ${s.emailer_campaign_name || s.emailer_campaign_id} _(${s.status})_`).join('\n')
         : '_Not enrolled in any sequences_')
     : '_Not in Apollo_';
 
-  // Deals (by company)
   const dealsText = apollo.found
     ? (apollo.deals?.length > 0
         ? apollo.deals.map(d => `• ${d.name} — ${d.stage_name || 'unknown stage'}${d.amount ? ` ($${Number(d.amount).toLocaleString()})` : ''}`).join('\n')
@@ -294,60 +347,50 @@ function buildVisitorBlocks(visitor, apollo) {
       ? '⚠️ Could not log note to Apollo'
       : '➕ Not in Apollo — contact created, note pending';
 
-  const blocks = [
-    // ── Visitor identity
-    {
-      type: 'header',
-      text: { type: 'plain_text', text: '🌐 New Website Visitor' }
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `*${name || 'Unknown'}*${title ? `\n${title}` : ''}${company ? `\n${company}` : ''}${location ? ` · ${location}` : ''}`
+  return {
+    blocks: [
+      { type: 'header', text: { type: 'plain_text', text: '🌐 New Website Visitor' } },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*${name || 'Unknown'}*${title ? `\n${title}` : ''}${company ? `\n${company}` : ''}${location ? ` · ${location}` : ''}`
+        }
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Email:*\n${email || 'N/A'}` },
+          { type: 'mrkdwn', text: `*LinkedIn:*\n${linkedInDisplay}` },
+          { type: 'mrkdwn', text: `*Page Visited:*\n${pageVisited || 'N/A'}` },
+          { type: 'mrkdwn', text: `*Visit Time:*\n${visitTime || 'N/A'}` }
+        ]
+      },
+      { type: 'divider' },
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*Apollo Status:* ${statusLine}\n${linksLine}` }
+      },
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*Associated Lists*\n${listsText}` }
+      },
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*Associated Sequences*\n${seqText}` }
+      },
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*Associated Deals*\n${dealsText}` }
+      },
+      { type: 'divider' },
+      {
+        type: 'context',
+        elements: [{ type: 'mrkdwn', text: footerText }]
       }
-    },
-    {
-      type: 'section',
-      fields: [
-        { type: 'mrkdwn', text: `*Email:*\n${email || 'N/A'}` },
-        { type: 'mrkdwn', text: `*LinkedIn:*\n${linkedInDisplay}` },
-        { type: 'mrkdwn', text: `*Page Visited:*\n${pageVisited || 'N/A'}` },
-        { type: 'mrkdwn', text: `*Visit Time:*\n${visitTime || 'N/A'}` }
-      ]
-    },
-    { type: 'divider' },
-    // ── Apollo Status + links
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `*Apollo Status:* ${statusLine}\n${linksLine}`
-      }
-    },
-    // ── Associated Lists
-    {
-      type: 'section',
-      text: { type: 'mrkdwn', text: `*Associated Lists*\n${listsText}` }
-    },
-    // ── Associated Sequences
-    {
-      type: 'section',
-      text: { type: 'mrkdwn', text: `*Associated Sequences*\n${seqText}` }
-    },
-    // ── Associated Deals
-    {
-      type: 'section',
-      text: { type: 'mrkdwn', text: `*Associated Deals*\n${dealsText}` }
-    },
-    { type: 'divider' },
-    {
-      type: 'context',
-      elements: [{ type: 'mrkdwn', text: footerText }]
-    }
-  ];
-
-  return { blocks, fallbackText: `New visitor: ${name || 'Unknown'} from ${company || 'Unknown'}` };
+    ],
+    fallbackText: `New visitor: ${name || 'Unknown'} from ${company || 'Unknown'}`
+  };
 }
 
 async function postToInboundLeads(channelId, visitor, apollo) {
@@ -530,17 +573,27 @@ async function run() {
         apollo.noted = await logNote(contactId, visitor);
       }
     } else if (visitor.company) {
-      // No contact found — tag the company account in Apollo
+      // No contact found — tag the company account and pull account-level details
       const accountId = await findAccountByName(visitor.company);
       if (accountId) {
-        const account = await getAccountDetails(accountId);
+        const [account, allLabels, deals] = await Promise.all([
+          getAccountDetails(accountId),
+          getAllLabels(),
+          getDealsByAccount(accountId)
+        ]);
         const existingAccountLabelIds = account?.label_ids || [];
         if (!existingAccountLabelIds.includes(WEB_VISITORS_ACCOUNT_LABEL_ID)) {
           await apolloClient.put(`/accounts/${accountId}`, {
             label_ids: [...existingAccountLabelIds, WEB_VISITORS_ACCOUNT_LABEL_ID]
           }).catch(err => console.error('Add account to web visitors list error:', err.response?.data?.error || err.message));
         }
+        const labelMap = Object.fromEntries(allLabels.map(l => [l.id, l.name]));
+        const updatedLabelIds = [...new Set([...existingAccountLabelIds, WEB_VISITORS_ACCOUNT_LABEL_ID])];
         apollo.accountId = accountId;
+        apollo.accountLabels = updatedLabelIds.map(id => labelMap[id] || id);
+        apollo.accountWebsite = account?.website_url || null;
+        apollo.accountLinkedin = account?.linkedin_url || null;
+        apollo.deals = deals;
         console.log(`  → No contact found, tagged company account ${accountId} in Website Visitors list`);
       }
     }
