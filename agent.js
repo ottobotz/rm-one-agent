@@ -455,8 +455,6 @@ async function run() {
   });
 
   const allMessages = history.messages || [];
-  console.log(`Raw messages: ${allMessages.length}, oldest cursor: ${state.lastTimestamp}`);
-  allMessages.slice(0, 5).forEach(m => console.log(`  ts=${m.ts} text=${(m.text||'').slice(0,60)}`));
 
   const rb2bMessages = allMessages
     .filter(m =>
