@@ -11,6 +11,7 @@ const apolloClient = axios.create({
   headers: { 'X-Api-Key': process.env.APOLLO_API_KEY, 'Content-Type': 'application/json' }
 });
 const STATE_FILE = path.join(__dirname, 'state.json');
+const WEB_VISITORS_LABEL_ID = '69e2856c8982aa002116395f'; // "Website Visitors (RB2B)" list in Apollo
 
 // ─── State Management ─────────────────────────────────────────────────────────
 
@@ -467,8 +468,18 @@ async function run() {
         const sequences = (contact?.contact_campaign_statuses || [])
           .filter(s => !['finished', 'removed', 'stopped'].includes(s.status));
 
+        // Add to "Website Visitors (RB2B)" list if not already on it
+        const existingLabelIds = contact?.label_ids || [];
+        if (!existingLabelIds.includes(WEB_VISITORS_LABEL_ID)) {
+          await apolloClient.put(`/contacts/${contactId}`, {
+            label_ids: [...existingLabelIds, WEB_VISITORS_LABEL_ID]
+          }).catch(err => console.error('Add to web visitors list error:', err.response?.data?.error || err.message));
+        }
+
         // Contact (people) lists
-        const contactLabels = (contact?.label_ids || []).map(id => labelMap[id] || id);
+        const contactLabels = [...existingLabelIds, WEB_VISITORS_LABEL_ID]
+          .filter((id, i, arr) => arr.indexOf(id) === i)
+          .map(id => labelMap[id] || id);
 
         // Account details + deals — both keyed off accountId
         let accountLabels = [];
