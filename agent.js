@@ -455,20 +455,20 @@ async function run() {
     const visitor = parseRB2BMessage(message);
     console.log(`Processing: ${visitor.name} from ${visitor.company} | email: ${visitor.email}`);
 
-    // Skip if no identifiable person (company-only RB2B hits)
-    if (!visitor.name || !visitor.email) {
-      console.log('  → Skipping: no person name or email');
+    // Skip only if there is truly nothing to work with
+    if (!visitor.email && !visitor.company) {
+      console.log('  → Skipping: no email or company identified');
       state.lastTimestamp = String(parseFloat(message.ts) + 0.001);
       saveState(state);
       continue;
     }
 
-    // Apollo lookup — email first, then name + company fallback
+    // Apollo lookup — email first, then name + company (only when name differs from company)
     let person = null;
     if (visitor.email) {
       person = await apolloMatchByEmail(visitor.email);
     }
-    if (!person && visitor.name && visitor.company) {
+    if (!person && visitor.name && visitor.company && visitor.name !== visitor.company) {
       person = await apolloSearchByName(visitor.name, visitor.company);
     }
 
