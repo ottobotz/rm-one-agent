@@ -379,11 +379,10 @@ async function run() {
 
   const state = loadState();
 
-  const [rb2bChannelId, inboundChannelId, generalChannelId, blumeChannelId] = await Promise.all([
+  const [rb2bChannelId, inboundChannelId, generalChannelId] = await Promise.all([
     getChannelId('rb2b-profiles'),
     getChannelId('inbound-leads'),
-    getChannelId('general'),
-    getChannelId('ext-rmone-blume')
+    getChannelId('general')
   ]);
 
   if (!rb2bChannelId) { console.error('Cannot find #rb2b-profiles — is the bot invited?'); return; }
@@ -521,8 +520,7 @@ async function run() {
     }
 
     await postToInboundLeads(inboundChannelId, visitor, apollo);
-    if (generalChannelId) await postCTANotification(generalChannelId, visitor, apollo);
-    if (blumeChannelId) await postCTANotification(blumeChannelId, visitor, apollo);
+    if (generalChannelId) await postToInboundLeads(generalChannelId, visitor, apollo);
 
     // React to the original RB2B message to confirm it was processed
     await slack.reactions.add({
