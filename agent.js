@@ -51,12 +51,20 @@ function parseRB2BMessage(message) {
   // message.text has clean data (no Slack mailto/URL formatting)
   const text = message.text || '';
 
-  // Name comes from the header block — format is "Name" or "Name from Company"
+  // Name: new visitor header is "Name from Company"; repeat visitor header is "REPEAT VISITOR SIGNAL"
+  // so fall back to the first section block containing " from " for repeat visitor messages
   const headerBlock = message.blocks?.find(b => b.type === 'header');
-  const headerText = headerBlock?.text?.text?.trim() || null;
-  const name = headerText?.includes(' from ')
-    ? headerText.split(' from ')[0].trim()
-    : headerText;
+  const headerText = headerBlock?.text?.text?.trim() || '';
+  let name;
+  if (headerText.includes(' from ')) {
+    name = headerText.split(' from ')[0].trim();
+  } else {
+    const sectionWithFrom = message.blocks?.find(b => b.type === 'section' && b.text?.text?.includes(' from '));
+    const sectionText = sectionWithFrom?.text?.text?.trim() || '';
+    name = sectionText.includes(' from ') ? sectionText.replace(/\*/g, '').split(' from ')[0].trim() : null;
+  }
+
+  const isRepeatVisitor = headerText.toLowerCase().includes('repeat visitor');
 
   const get = (label) => {
     const m = text.match(new RegExp(`\\*${label}\\*:\\s*([^\\n*\\r]+?)(?:\\s*(?:First identified|company logo|\\n)|$)`, 'i'));
@@ -78,12 +86,19 @@ function parseRB2BMessage(message) {
   const linkedinMatch = text.match(/https?:\/\/(?:www\.)?linkedin\.com\/in\/[^\s>]+/);
   const linkedin = linkedinMatch ? linkedinMatch[0] : null;
 
-  // Page visited + timestamp — strip Slack's *<url>* formatting
-  const visitMatch = text.match(/First identified visiting\s+\*?<?([^>*\s]+)>?\*?\s+on\s+\*?([^*\n]+)\*?/i);
-  const pageVisited = visitMatch ? visitMatch[1] : null;
-  const visitTime = visitMatch ? visitMatch[2].trim() : null;
+  // Page visited + timestamp
+  let pageVisited = null, visitTime = null;
+  const newVisitMatch = text.match(/First identified visiting\s+\*?<?([^>*\s]+)>?\*?\s+on\s+\*?([^*\n]+)\*?/i);
+  const repeatVisitMatch = text.match(/has visited\s+(\d+)\s+pages? on your site since\s+([^\n.]+)/i);
+  if (newVisitMatch) {
+    pageVisited = newVisitMatch[1];
+    visitTime = newVisitMatch[2].trim();
+  } else if (repeatVisitMatch) {
+    pageVisited = `${repeatVisitMatch[1]} page(s) on rmone.com`;
+    visitTime = repeatVisitMatch[2].trim();
+  }
 
-  return { name, title, company, email, linkedin, location, pageVisited, visitTime };
+  return { name, title, company, email, linkedin, location, pageVisited, visitTime, isRepeatVisitor };
 }
 
 // ─── LinkedIn Helpers ─────────────────────────────────────────────────────────
@@ -266,7 +281,7 @@ function buildVisitorBlocks(visitor, apollo) {
 
     return {
       blocks: [
-        { type: 'header', text: { type: 'plain_text', text: '🌐 New Website Visitor' } },
+        { type: 'header', text: { type: 'plain_text', text: visitor.isRepeatVisitor ? '🔁 Repeat Website Visitor' : '🌐 New Website Visitor' } },
         {
           type: 'section',
           text: {
@@ -349,7 +364,7 @@ function buildVisitorBlocks(visitor, apollo) {
 
   return {
     blocks: [
-      { type: 'header', text: { type: 'plain_text', text: '🌐 New Website Visitor' } },
+      { type: 'header', text: { type: 'plain_text', text: visitor.isRepeatVisitor ? '🔁 Repeat Website Visitor' : '🌐 New Website Visitor' } },
       {
         type: 'section',
         text: {
@@ -445,7 +460,8 @@ async function run() {
     .filter(m =>
       m.bot_profile?.name?.toLowerCase().includes('rb2b') ||
       m.username?.toLowerCase().includes('rb2b') ||
-      m.text?.toLowerCase().includes('first identified visiting')
+      m.text?.toLowerCase().includes('first identified visiting') ||
+      m.text?.toLowerCase().includes('pages on your site')
     )
     .reverse(); // process oldest first
 
