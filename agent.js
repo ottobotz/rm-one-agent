@@ -11,7 +11,8 @@ const apolloClient = axios.create({
   headers: { 'X-Api-Key': process.env.APOLLO_API_KEY, 'Content-Type': 'application/json' }
 });
 const STATE_FILE = path.join(__dirname, 'state.json');
-const WEB_VISITORS_LABEL_ID = '69e2856c8982aa002116395f'; // "Website Visitors (RB2B)" list in Apollo
+const WEB_VISITORS_LABEL_ID = '69e2856c8982aa002116395f';         // "Website Visitors (RB2B)" contacts list
+const WEB_VISITORS_ACCOUNT_LABEL_ID = '69e6fa81161800000d621980'; // "Website Visitors (RB2B)" accounts list
 
 // ─── State Management ─────────────────────────────────────────────────────────
 
@@ -527,6 +528,20 @@ async function run() {
         apollo.linkedin = resolvedLinkedIn;
         apollo.linkedInSource = linkedInSource;
         apollo.noted = await logNote(contactId, visitor);
+      }
+    } else if (visitor.company) {
+      // No contact found — tag the company account in Apollo
+      const accountId = await findAccountByName(visitor.company);
+      if (accountId) {
+        const account = await getAccountDetails(accountId);
+        const existingAccountLabelIds = account?.label_ids || [];
+        if (!existingAccountLabelIds.includes(WEB_VISITORS_ACCOUNT_LABEL_ID)) {
+          await apolloClient.put(`/accounts/${accountId}`, {
+            label_ids: [...existingAccountLabelIds, WEB_VISITORS_ACCOUNT_LABEL_ID]
+          }).catch(err => console.error('Add account to web visitors list error:', err.response?.data?.error || err.message));
+        }
+        apollo.accountId = accountId;
+        console.log(`  → No contact found, tagged company account ${accountId} in Website Visitors list`);
       }
     }
 
