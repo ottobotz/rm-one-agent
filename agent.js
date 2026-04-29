@@ -173,8 +173,16 @@ async function getAccountDetails(accountId) {
 
 async function getAllLabels() {
   try {
-    const res = await apolloClient.get('/labels');
-    return res.data.labels || [];
+    const all = [];
+    let page = 1;
+    while (true) {
+      const res = await apolloClient.get('/labels', { params: { page, per_page: 200 } });
+      const labels = Array.isArray(res.data) ? res.data : (res.data.labels || []);
+      all.push(...labels);
+      if (labels.length < 200) break;
+      page++;
+    }
+    return all;
   } catch (err) {
     console.error('Labels fetch error:', err.response?.data?.error || err.message);
     return [];
@@ -474,7 +482,7 @@ async function run() {
     // Skip only if there is truly nothing to work with
     if (!visitor.email && !visitor.company) {
       console.log('  → Skipping: no email or company identified');
-      state.lastTimestamp = String(parseFloat(message.ts) + 0.001);
+      state.lastTimestamp = String(Math.floor(parseFloat(message.ts)) + 1);
       saveState(state);
       continue;
     }
@@ -624,7 +632,7 @@ async function run() {
       name: 'white_check_mark'
     }).catch(() => {}); // non-fatal if it fails
 
-    state.lastTimestamp = String(parseFloat(message.ts) + 0.001);
+    state.lastTimestamp = String(Math.floor(parseFloat(message.ts)) + 1);
     saveState(state);
   }
 
