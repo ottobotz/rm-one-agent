@@ -84,7 +84,7 @@ async function run() {
   const dateLabel = since.toLocaleDateString('en-US', { timeZone: 'America/Chicago', month: 'long', day: 'numeric', year: 'numeric' });
   console.log(`[${new Date().toISOString()}] Running call audit for ${dateLabel} (since ${since.toISOString()})`);
 
-  const channelId = await getChannelId('company-and-contact-enrichment');
+  const channelId = await getChannelId('company-and-conact-enrichment');
   if (!channelId) { console.error('Cannot find #company-and-contact-enrichment channel'); return; }
 
   // Fetch calls for each target outcome
